@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         const data = await res.json();
         if (!data.ticks) return NextResponse.json({ error: "Network error" }, { status: 500 });
 
-        return NextResponse.json({ ok: true, data }, { status: 200 });
+        return NextResponse.json({ ok: true, ticks: data.ticks, statistics: data.statistics }, { status: 200 });
     } catch (error) {
         return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
