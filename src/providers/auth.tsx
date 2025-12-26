@@ -18,15 +18,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                 setAuth(data);
 
                 if (!data.ok && pathname === "/") {
-                    router.push("/login");
+                    router.push("/auth");
                 }
 
-                if (data.ok && pathname === "/login") {
+                if (data.ok && pathname === "/auth") {
                     router.push("/");
                 }
             } else {
                 if (pathname === "/") {
-                    router.push("/login");
+                    router.push("/auth");
                     toastError("Unauthorized");
                 }
             }

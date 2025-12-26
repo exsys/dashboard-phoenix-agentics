@@ -37,10 +37,12 @@ export default function NasdaqSection() {
     });
     const [dataCache, setDataCache] = useState<TicksDataCache>(EMPTY_CACHE);
     const [afterFees, setAfterFees] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(false);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setLoading(true);
                 const response = await fetch(`/api/nq-ticks?type=balanced&time_frame=${timeframe}`, {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
@@ -62,6 +64,7 @@ export default function NasdaqSection() {
             } catch (error) {
                 console.error('Error fetching nasdaq data:', error);
             }
+            setLoading(false);
         };
 
         fetchData();
@@ -355,7 +358,7 @@ export default function NasdaqSection() {
                     </div>
 
                     <div className="w-[96%] sm:w-[90%] mx-auto">
-                        <TicksChart data={ticksData} usePoints={true} />
+                        <TicksChart data={ticksData} usePoints={true} loading={loading} />
                     </div>
                 </div>
             </div>
