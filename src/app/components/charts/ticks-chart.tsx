@@ -1,5 +1,4 @@
 "use client";
-import { capitalizeFirstLetter } from "@/app/lib/util";
 import { TicksData } from "@/types/TicksData";
 import { useEffect, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -87,12 +86,12 @@ export default function TicksChart({ data, usePoints, loading }: Props) {
                                         tick={{ fill: "#99B2C6" }} ticks={yAxisTicks} tickFormatter={formatNumber} />
                                     <CartesianGrid horizontal={true} vertical={false} stroke="#2a3b4d" />
                                     <Tooltip
-                                        formatter={(value, name) => [`$${value}`, capitalizeFirstLetter(name as string)]}
+                                        formatter={(value, name) => [`${value}`, usePoints ? "Points" : "Ticks"]}
                                         cursor={{ strokeDasharray: '5 5' }}
                                         labelFormatter={formatXAxis}
-                                        itemStyle={{ color: "white", paddingBlock: "0.25rem", paddingInline: "1rem" }}
+                                        itemStyle={{ color: "white", paddingBlock: "0.25rem", paddingInline: "1rem", fontSize: "1.125rem" }}
                                         contentStyle={{ background: "transparent", padding: "0" }}
-                                        labelStyle={{ borderBottom: "1px solid white", paddingBlock: "0.25rem", paddingInline: "1rem" }}
+                                        labelStyle={{ borderBottom: "1px solid white", paddingBlock: "0.25rem", paddingInline: "1rem", fontSize: "1.125rem" }}
                                     />
                                     <Area type="monotone" dataKey="ticks" stroke='#BFA25A' fillOpacity={1} fill={`url(#ticks)`} animationDuration={1000} />
                                 </AreaChart>

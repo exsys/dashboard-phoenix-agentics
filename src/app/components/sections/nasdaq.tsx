@@ -294,7 +294,7 @@ export default function NasdaqSection() {
 
                     <div className='flex flex-col xl:flex-row justify-between items-center gap-4 lg:gap-2 mt-4 mb-2 w-[90%] mx-auto'>
                         <div className="flex items-center flex-col lg:flex-row gap-4 xl:gap-8">
-                            <div className="flex items-center border border-(--gold) rounded-lg text-lg">
+                            <div className="hidden items-center border border-(--gold) rounded-lg text-lg">
                                 <div className="p-1 border-r border-(--gold) min-w-25 cursor-pointer">
                                     <div className={`hover:text-white rounded-md px-2 py-0.5
                                     ${agentType === "velocity" ? "bg-white/10" : "text-gray-400"}`}
