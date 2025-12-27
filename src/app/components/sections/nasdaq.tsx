@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import TicksChart from "../charts/ticks-chart";
 import { TEST_NQ_DATA } from "@/app/lib/test-data";
+import Link from "next/link";
 
 const MARGIN_PER_CONTRACT_NQ = 30000;
 const GAIN_PER_TICK_NQ = 5;
@@ -361,6 +362,23 @@ export default function NasdaqSection() {
                         <TicksChart data={ticksData} usePoints={true} loading={loading} />
                     </div>
                 </div>
+            </div>
+
+            <div className="w-[90%] xl:w-3/5 mx-auto text-center mt-24 mb-6">
+                <h2 className="text-2xl font-medium mb-2">
+                    Underlying Simulated Data Disclosure (QEPs Only)
+                </h2>
+
+                <p className="text-lg">
+                    The simulated performance information shown is based on internally generated,
+                    timestamped simulated trading data and does not reflect actual trading results.
+                    The complete underlying simulated dataset may be made available for inspection by&nbsp;
+                    <Link href={"https://www.law.cornell.edu/cfr/text/17/4.7"} target="_blanbk" className="underline">
+                        Qualified Eligible Persons
+                    </Link>
+                    &nbsp;(“QEPs”) under CFTC Regulation 4.7,
+                    upon written request and subject to execution of a non-disclosure agreement.
+                </p>
             </div>
         </div>
     )
