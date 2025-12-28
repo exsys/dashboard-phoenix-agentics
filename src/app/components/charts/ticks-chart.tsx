@@ -5,11 +5,13 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 
 interface Props {
     data: TicksData[];
+    dataAfterFees: TicksData[];
     usePoints: boolean;
     loading: boolean;
+    calculate_y_axis: boolean;
 }
 
-export default function TicksChart({ data, usePoints, loading }: Props) {
+export default function TicksChart({ data, dataAfterFees, usePoints, loading, calculate_y_axis }: Props) {
     const [yAxisDomain, setYAxisDomain] = useState<number[]>([0, 0]);
     const [yAxisTicks, setYAxisTicks] = useState<number[]>([]);
 
@@ -27,7 +29,8 @@ export default function TicksChart({ data, usePoints, loading }: Props) {
     };
 
     function calculateYAxisDomain(data: TicksData[]) {
-        const ticksValues = data.map((d: TicksData) => d.ticks);
+        if (!calculate_y_axis && !dataAfterFees?.length) return { domain: yAxisDomain, ticks: yAxisTicks };
+        const ticksValues = data.map((d: TicksData) => d.points);
         const minTicks = 0
         const maxTicks = Math.max(...ticksValues);
 
@@ -37,7 +40,7 @@ export default function TicksChart({ data, usePoints, loading }: Props) {
 
         const range = roundedMax - roundedMin;
         const maxSteps = 5;
-        let stepInterval = Math.pow(10, Math.floor(Math.log10(range / 10))); // base interval
+        let stepInterval = Math.pow(10, Math.floor(Math.log10(range / 10))); // base interval for y-axis spacing
         while (range / stepInterval > maxSteps) {
             stepInterval *= 2; // increase spacing on y-axis if too many steps
         }
@@ -73,9 +76,9 @@ export default function TicksChart({ data, usePoints, loading }: Props) {
                     <>
                         {data?.length ? (
                             <ResponsiveContainer width={"100%"} height={"100%"}>
-                                <AreaChart data={data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
+                                <AreaChart data={dataAfterFees?.length ? dataAfterFees : data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
                                     <defs>
-                                        <linearGradient id={`ticks`} x1="0" y1="0" x2="0" y2="1">
+                                        <linearGradient id={`points`} x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor='#BFA25A' stopOpacity={0.4} />
                                             <stop offset="75%" stopColor='#BFA25A' stopOpacity={0} />
                                         </linearGradient>
@@ -86,14 +89,14 @@ export default function TicksChart({ data, usePoints, loading }: Props) {
                                         tick={{ fill: "#99B2C6" }} ticks={yAxisTicks} tickFormatter={formatNumber} />
                                     <CartesianGrid horizontal={true} vertical={false} stroke="#2a3b4d" />
                                     <Tooltip
-                                        formatter={(value, name) => [`${value}`, usePoints ? "Points" : "Ticks"]}
+                                        formatter={(value, name) => [`${value}`, "Points"]}
                                         cursor={{ strokeDasharray: '5 5' }}
                                         labelFormatter={formatXAxis}
                                         itemStyle={{ color: "white", paddingBlock: "0.25rem", paddingInline: "1rem", fontSize: "1.125rem" }}
                                         contentStyle={{ background: "transparent", padding: "0" }}
                                         labelStyle={{ borderBottom: "1px solid white", paddingBlock: "0.25rem", paddingInline: "1rem", fontSize: "1.125rem" }}
                                     />
-                                    <Area type="monotone" dataKey="ticks" stroke='#BFA25A' fillOpacity={1} fill={`url(#ticks)`} animationDuration={1000} />
+                                    <Area type="monotone" dataKey="points" stroke='#BFA25A' fillOpacity={1} fill={`url(#points)`} animationDuration={1000} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         ) : (

@@ -15,6 +15,8 @@ import Link from "next/link";
 const MARGIN_PER_CONTRACT_NQ = 30000;
 const GAIN_PER_TICK_NQ = 5;
 const TICKS_PER_POINT_NQ = 4;
+const FEE_UNDER_FORTY_PERC = 0.25;
+const FEE_ABOVE_FORTY_PERC = 0.4;
 const EMPTY_CACHE: TicksDataCache = {
     balanced: {},
     velocity: {},
@@ -29,6 +31,7 @@ export default function NasdaqSection() {
     const [timeframe, setTimeframe] = useState<string>(TIMEFRAMES[3]);
     const [agentType, setAgentType] = useState<AgentMode>('balanced');
     const [ticksData, setTicksData] = useState<TicksData[]>([]);
+    const [ticksAfterFeesData, setTicksAfterFeesData] = useState<TicksData[]>([]);
     const [latestPoints, setLatestPoints] = useState<number>(0);
     const [latestROI, setLatestROI] = useState<number>(0);
     const [latestAnnualizedROI, setLatestAnnualizedROI] = useState(0);
@@ -79,6 +82,7 @@ export default function NasdaqSection() {
             const latestAnnualizedRoi = (1 + latestData.roi) ** (365 * 24 * 60 * 60 * 1000 / (new Date().getTime() - firstData.timestamp)) - 1;
 
             if (afterFees) {
+                calculateTicksAfterFees(ticksData);
                 calculateAfterFees(latestData, latestAnnualizedRoi);
             } else {
                 setLatestPoints(latestData.points);
@@ -109,8 +113,9 @@ export default function NasdaqSection() {
             const contracts = agent_mode === "velocity" ? 100 : 320;
             const formattedBalancedData: TicksData[] = formatTicksData(data.ticks, TICKS_PER_POINT_NQ, contracts, MARGIN_PER_CONTRACT_NQ, GAIN_PER_TICK_NQ);
             setTicksData(formattedBalancedData);
-
             setStatistics(data.statistics);
+            if (afterFees) calculateTicksAfterFees(formattedBalancedData);
+
             const cache = { ...dataCache };
             cache[agent_mode][timeFrame] = formattedBalancedData;
             cache.statistics[agent_mode][timeFrame] = data.statistics;
@@ -120,23 +125,15 @@ export default function NasdaqSection() {
         }
     }
 
-    function formatTicksData(
-        data: TicksApiData[],
-        ticksPerPoint: number = 1,
-        contracts: number = 100,
-        marginPerContract: number,
-        gainPerTick: number = 10
-    ): TicksData[] {
+    function formatTicksData(data: TicksApiData[], ticksPerPoint: number, contracts: number, marginPerContract: number, gainPerTick: number): TicksData[] {
         if (!data || data.length === 0) {
             return [];
         }
 
-        // Sort data by timestamp
         const sortedData = data.sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
 
-        // Group and sum ticks by day, maintaining running total
         const dailyTotals: Record<string, { ticks: number; points: number; displayDate: string; roi: number; timestamp: number }> = {};
         let runningTotal = 0;
         sortedData.forEach(item => {
@@ -150,7 +147,7 @@ export default function NasdaqSection() {
             const dayKey = date.toISOString().split('T')[0];
             runningTotal += item.ticks;
             dailyTotals[dayKey] = {
-                ticks: runningTotal, // Apply scaling factor
+                ticks: runningTotal,
                 points: runningTotal / ticksPerPoint,
                 displayDate: formatter.format(date),
                 roi: runningTotal * gainPerTick / contracts / marginPerContract,
@@ -168,21 +165,69 @@ export default function NasdaqSection() {
         }));
     };
 
-    function toggleFees(value: boolean) {
-        setAfterFees(value);
+    function toggleFees(toggleOn: boolean) {
+        setAfterFees(toggleOn);
 
         const latestData = ticksData?.length > 0 ? ticksData[ticksData.length - 1] : null;
         const firstData = ticksData?.length > 0 ? ticksData[0] : null;
         if (!latestData || !firstData) return;
 
         const latestAnnualizedRoi = (1 + latestData.roi) ** (365 * 24 * 60 * 60 * 1000 / (new Date().getTime() - firstData.timestamp)) - 1;
-        if (value) {
+        if (toggleOn) {
             calculateAfterFees(latestData, latestAnnualizedRoi);
+            calculateTicksAfterFees(ticksData);
         } else {
+            setTicksAfterFeesData([]);
+            refetchData(timeframe, "balanced");
             setLatestPoints(latestData.points);
             setLatestROI(latestData.roi);
             setLatestAnnualizedROI(latestAnnualizedRoi);
         }
+    }
+
+    function calculateTicksAfterFees(ticks_data: TicksData[]) {
+        const ticks: TicksData[] = [...ticks_data];
+        const ticksAfterFees: TicksData[] = [];
+        const startDate = new Date("2025-05-02");
+        const endMonth = new Date();
+        const timeFrameToMonths = {
+            "1M": 1,
+            "3M": 3,
+            "6M": 6,
+            "1Y": 12,
+            "All Time": (endMonth.getFullYear() - startDate.getFullYear()) * 12 + (endMonth.getMonth() - startDate.getMonth())
+        };
+
+        for (let i = 0; i < ticks.length; i++) {
+            const latestData = ticks_data?.length > 0 ? ticks_data[ticks_data.length - 1] : null;
+            const firstData = ticks_data?.length > 0 ? ticks_data[0] : null;
+            if (!latestData || !firstData) return;
+
+            let tickAfterFees = 0;
+            let pointsAfterFees = 0;
+
+            if (latestData.roi <= 0.4) {
+                tickAfterFees = ticks[i].ticks * (1 - FEE_UNDER_FORTY_PERC);
+                pointsAfterFees = ticks[i].points * (1 - FEE_UNDER_FORTY_PERC);
+            } else {
+                tickAfterFees = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((ticks[i].ticks - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
+                pointsAfterFees = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((ticks[i].points - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
+            }
+
+            const adjustedTwoPercentFee = Number(((0.02 / 12) * timeFrameToMonths[timeframe as keyof typeof timeFrameToMonths]).toFixed(2));
+            tickAfterFees = Number((tickAfterFees * (1 - adjustedTwoPercentFee)).toFixed(2));
+            pointsAfterFees = Number((pointsAfterFees * (1 - adjustedTwoPercentFee)).toFixed(2));
+
+            ticksAfterFees.push({
+                ticks: tickAfterFees,
+                points: pointsAfterFees,
+                date: ticks[i].date,
+                roi: ticks[i].roi,
+                timestamp: ticks[i].timestamp
+            });
+        }
+
+        setTicksAfterFeesData([...ticksAfterFees]);
     }
 
     function calculateAfterFees(latestData: TicksData, latestAnnualizedRoi: number) {
@@ -196,19 +241,17 @@ export default function NasdaqSection() {
             "All Time": (endMonth.getFullYear() - startDate.getFullYear()) * 12 + (endMonth.getMonth() - startDate.getMonth())
         };
 
-        const feeUnderFortyPerc = 0.25;
-        const feeAboveFortyPerc = 0.4;
         let pointsAfterPerfFee = latestData.points;
         let roiAfterPerfFee = latestData.roi;
         let annualizedAfterPerfFee = latestAnnualizedRoi;
         if (latestData.roi <= 0.4) {
-            pointsAfterPerfFee = latestData.points * (1 - feeUnderFortyPerc);
-            roiAfterPerfFee = latestData.roi * (1 - feeUnderFortyPerc);
-            annualizedAfterPerfFee = latestAnnualizedRoi * (1 - feeUnderFortyPerc);
+            pointsAfterPerfFee = latestData.points * (1 - FEE_UNDER_FORTY_PERC);
+            roiAfterPerfFee = latestData.roi * (1 - FEE_UNDER_FORTY_PERC);
+            annualizedAfterPerfFee = latestAnnualizedRoi * (1 - FEE_UNDER_FORTY_PERC);
         } else {
-            pointsAfterPerfFee = (0.4 * (1 - feeUnderFortyPerc)) + ((latestData.points - 0.4) * (1 - feeAboveFortyPerc));
-            roiAfterPerfFee = (0.4 * (1 - feeUnderFortyPerc)) + ((latestData.roi - 0.4) * (1 - feeAboveFortyPerc));
-            annualizedAfterPerfFee = (0.4 * (1 - feeUnderFortyPerc)) + ((latestAnnualizedRoi - 0.4) * (1 - feeAboveFortyPerc));
+            pointsAfterPerfFee = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((latestData.points - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
+            roiAfterPerfFee = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((latestData.roi - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
+            annualizedAfterPerfFee = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((latestAnnualizedRoi - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
         }
 
         const adjustedTwoPercentFee = Number(((0.02 / 12) * timeFrameToMonths[timeframe as keyof typeof timeFrameToMonths]).toFixed(2));
@@ -359,7 +402,13 @@ export default function NasdaqSection() {
                     </div>
 
                     <div className="w-[96%] sm:w-[90%] mx-auto">
-                        <TicksChart data={ticksData} usePoints={true} loading={loading} />
+                        <TicksChart
+                            data={ticksData}
+                            dataAfterFees={ticksAfterFeesData}
+                            usePoints={true}
+                            loading={loading}
+                            calculate_y_axis={!afterFees}
+                        />
                     </div>
                 </div>
             </div>
