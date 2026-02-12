@@ -24,7 +24,7 @@ export default function Footer() {
                         <div></div>
 
                         <div className="text-xl font-medium">
-                            Copyright © 2025 Phoenix Agentics, LLC
+                            Copyright © 2025 Phoenix Agentics Capital Partners LLC
                         </div>
 
                         <div className="w-full xl:w-120 text-center mb-8 lg:mb-0 pb-10 lg:pb-0 border-b border-(--primary) lg:border-0">
