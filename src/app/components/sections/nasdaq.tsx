@@ -15,8 +15,7 @@ import Link from "next/link";
 const MARGIN_PER_CONTRACT_NQ = 30000;
 const GAIN_PER_TICK_NQ = 5;
 const TICKS_PER_POINT_NQ = 4;
-const FEE_UNDER_FORTY_PERC = 0.25;
-const FEE_ABOVE_FORTY_PERC = 0.4;
+const PERFORMANCE_FEE = 0.22;
 const EMPTY_CACHE: TicksDataCache = {
     balanced: {},
     velocity: {},
@@ -203,16 +202,8 @@ export default function NasdaqSection() {
             const firstData = ticks_data?.length > 0 ? ticks_data[0] : null;
             if (!latestData || !firstData) return;
 
-            let tickAfterFees = 0;
-            let pointsAfterFees = 0;
-
-            if (latestData.roi <= 0.4) {
-                tickAfterFees = ticks[i].ticks * (1 - FEE_UNDER_FORTY_PERC);
-                pointsAfterFees = ticks[i].points * (1 - FEE_UNDER_FORTY_PERC);
-            } else {
-                tickAfterFees = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((ticks[i].ticks - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
-                pointsAfterFees = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((ticks[i].points - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
-            }
+            let tickAfterFees = ticks[i].ticks * (1 - PERFORMANCE_FEE);
+            let pointsAfterFees = ticks[i].points * (1 - PERFORMANCE_FEE);
 
             const adjustedTwoPercentFee = Number(((0.02 / 12) * timeFrameToMonths[timeframe as keyof typeof timeFrameToMonths]).toFixed(2));
             tickAfterFees = Number((tickAfterFees * (1 - adjustedTwoPercentFee)).toFixed(2));
@@ -241,18 +232,9 @@ export default function NasdaqSection() {
             "All Time": (endMonth.getFullYear() - startDate.getFullYear()) * 12 + (endMonth.getMonth() - startDate.getMonth())
         };
 
-        let pointsAfterPerfFee = latestData.points;
-        let roiAfterPerfFee = latestData.roi;
-        let annualizedAfterPerfFee = latestAnnualizedRoi;
-        if (latestData.roi <= 0.4) {
-            pointsAfterPerfFee = latestData.points * (1 - FEE_UNDER_FORTY_PERC);
-            roiAfterPerfFee = latestData.roi * (1 - FEE_UNDER_FORTY_PERC);
-            annualizedAfterPerfFee = latestAnnualizedRoi * (1 - FEE_UNDER_FORTY_PERC);
-        } else {
-            pointsAfterPerfFee = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((latestData.points - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
-            roiAfterPerfFee = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((latestData.roi - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
-            annualizedAfterPerfFee = (0.4 * (1 - FEE_UNDER_FORTY_PERC)) + ((latestAnnualizedRoi - 0.4) * (1 - FEE_ABOVE_FORTY_PERC));
-        }
+        const pointsAfterPerfFee = latestData.points * (1 - PERFORMANCE_FEE);
+        const roiAfterPerfFee = latestData.roi * (1 - PERFORMANCE_FEE);
+        const annualizedAfterPerfFee = latestAnnualizedRoi * (1 - PERFORMANCE_FEE);
 
         const adjustedTwoPercentFee = Number(((0.02 / 12) * timeFrameToMonths[timeframe as keyof typeof timeFrameToMonths]).toFixed(2));
         const pointsAfterFees = Number((pointsAfterPerfFee * (1 - adjustedTwoPercentFee)).toFixed(2));
@@ -380,7 +362,7 @@ export default function NasdaqSection() {
                                         style={{ backgroundColor: "rgba(0, 0, 0, 1)", fontSize: "1.125rem", zIndex: 50, maxWidth: "350px" }}
                                     >
                                         <span className="tracking-wide">
-                                            2% management fee + 25% performance fee on returns up to 40% and 40% performance fee on returns above 40%
+                                            2% management fee + 22% performance fee
                                         </span>
                                     </Tooltip>
                                 </div>
